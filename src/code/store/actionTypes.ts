@@ -1,0 +1,9 @@
+export const ACTION_UPDATE = 'ACTION_UPDATE' as const;
+export const TIMEOUT_UPDATE = 'TIMEOUT_UPDATE' as const;
+export const PAYLOAD_UPDATE = 'PAYLOAD_UPDATE' as const;
+export const RESPONSE_UPDATE = 'RESPONSE_UPDATE' as const;
+export const RESET_STORE_STATE = 'RESET_STORE_STATE' as const;
+export const SET_RESERVATION_LOADING = 'SET_RESERVATION_LOADING' as const;
+export const SET_RESERVATION_ERROR = 'SET_RESERVATION_ERROR' as const;
+export const SET_AGENT_DETAILS = 'SET_AGENT_DETAILS' as const;
+export const SET_AUTH_TOKEN = 'SET_AUTH_TOKEN' as const;
