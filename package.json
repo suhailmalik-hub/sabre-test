@@ -1,0 +1,42 @@
+{
+  "name": "intellivisa-redapp-web-module-src",
+  "version": "1.0.0",
+  "description": "NGV module",
+  "author": {
+    "name": "Nuron-Dev"
+  },
+  "contributors": [],
+  "private": true,
+  "license": "LicenseRef-LICENSE",
+  "dependencies": {
+    "sabre-ngv-app": "*",
+    "sabre-ngv-core": "*",
+    "sabre-ngv-redAppSidePanel": "*",
+    "sabre-ngv-xp": "*",
+    "sabre-ngv-communication": "*",
+    "sabre-ngv-modals": "*",
+    "sabre-ngv-sdk-events": "*"
+  },
+  "devDependencies": {},
+  "optionalDependencies": {},
+  "ngv": {
+    "buildDependencies": {
+      "sabre-ngv-app": "*",
+      "sabre-ngv-core": "*",
+      "sabre-ngv-redAppSidePanel": "*",
+      "sabre-ngv-xp": "*",
+      "sabre-ngv-communication": "*",
+      "sabre-ngv-modals": "*",
+      "sabre-ngv-sdk-events": "*"
+    },
+    "concierge_version_min": "7.6.5",
+    "runtimeDependencies": {},
+    "testDependencies": {},
+    "buildInfo": {
+      "concierge_version": "7.6.5",
+      "date": "2026-02-04T01:06:08.327Z",
+      "ts": 1770167168327,
+      "rebuildHash": "7x6x51d718957aca3391655c7647a7615361b15b7ca1bc"
+    }
+  }
+}
