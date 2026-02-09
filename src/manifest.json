@@ -1,0 +1,14 @@
+{
+  "name": "intellivisa-redapp-web-module",
+  "redAppId": "intellivisa.redapp",
+  "bundleSymbolicName": "intellivisa.redapp",
+  "bundleName": "intellivisa",
+  "contactDetails": {
+    "author": "NuronAI-Dev",
+    "email": "test@nuronai.org",
+    "phoneNumber": "9876543210",
+    "company": "NuronAI",
+    "contactName": "Development Team",
+    "website": "example.com"
+  }
+}
