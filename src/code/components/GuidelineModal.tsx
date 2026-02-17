@@ -95,6 +95,7 @@ const GuidelineModalComponent: React.FC<GuidelineModalProps> = ({ isOpen, onClos
             <button
               className='close-btn'
               onClick={onClose}
+              aria-label='Close'
             >
               &times;
             </button>
