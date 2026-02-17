@@ -6,13 +6,12 @@ export interface TravelFormData {
   sex: 'Male' | 'Female' | 'Unspecified' | '';
   passportIssueCountry: string;
   passportExpiryDate: string;
-  passportNationality: string;
-  birthDate: string;
-  departurePoint: string;
-  departureType: string;
+  nationality: string;
+  departureAirportCode: string;
   departureDateTime: string;
-  arrivalPoint: string;
-  arrivalType: string;
+  arrivalAirportCode: string;
   arrivalDateTime: string;
   returnDate: string;
+  fromCountry: string;
+  toCountry: string;
 }

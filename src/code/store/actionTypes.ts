@@ -7,3 +7,5 @@ export const SET_RESERVATION_LOADING = 'SET_RESERVATION_LOADING' as const;
 export const SET_RESERVATION_ERROR = 'SET_RESERVATION_ERROR' as const;
 export const SET_AGENT_DETAILS = 'SET_AGENT_DETAILS' as const;
 export const SET_AUTH_TOKEN = 'SET_AUTH_TOKEN' as const;
+export const SET_PNR_DATA = 'SET_PNR_DATA' as const;
+export const SET_TRIP_DETAILS = 'SET_TRIP_DETAILS' as const;

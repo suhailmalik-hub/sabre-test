@@ -73,3 +73,36 @@ export interface AirSegment {
   'stl19:Cabin'?: { $: { Name: string } }[];
   'stl19:Meal'?: { $: { Code: string } }[];
 }
+
+// --- PNR Data Interfaces for Redux Store ---
+export interface PnrPax {
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+
+export interface PnrSegment {
+  origin: string;
+  destination: string;
+  depDate: string;
+  arrDate: string;
+  flightNo: string;
+  carrier: string;
+  carrierName: string;
+  duration: string;
+  equipment: string;
+  class: string;
+  cabin: string;
+  status: string;
+  meal: string;
+}
+
+export interface PnrData {
+  locator: string;
+  createdDate: string;
+  agentId: string;
+  pcc: string;
+  pax: PnrPax[];
+  segments: PnrSegment[];
+  remarks: string[];
+}

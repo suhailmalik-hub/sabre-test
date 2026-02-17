@@ -1,4 +1,4 @@
-import { TokenData } from '../types';
+import { PnrData, TokenData, TravelFormData } from '../types';
 import {
   ACTION_UPDATE,
   PAYLOAD_UPDATE,
@@ -6,8 +6,10 @@ import {
   RESPONSE_UPDATE,
   SET_AGENT_DETAILS,
   SET_AUTH_TOKEN,
+  SET_PNR_DATA,
   SET_RESERVATION_ERROR,
   SET_RESERVATION_LOADING,
+  SET_TRIP_DETAILS,
   TIMEOUT_UPDATE,
 } from './actionTypes';
 
@@ -62,6 +64,16 @@ type SetAuthTokenAction = {
   payload: TokenData;
 };
 
+type SetPnrDataAction = {
+  type: typeof SET_PNR_DATA;
+  payload: PnrData | null;
+};
+
+type SetTripDetailsAction = {
+  type: typeof SET_TRIP_DETAILS;
+  payload: TravelFormData | null;
+};
+
 export type SoapActionTypes =
   | ResponseAction
   | ResetStoreStateAction
@@ -71,7 +83,9 @@ export type SoapActionTypes =
   | SetReservationLoadingAction
   | SetReservationErrorAction
   | SetAgentDetailsAction
-  | SetAuthTokenAction;
+  | SetAuthTokenAction
+  | SetPnrDataAction
+  | SetTripDetailsAction;
 
 export const updatePayload = (payload: string) => ({
   type: PAYLOAD_UPDATE,
@@ -113,4 +127,14 @@ export const setAgentDetails = (details: AgentDetails) => ({
 export const setAuthToken = (tokenData: TokenData) => ({
   type: SET_AUTH_TOKEN,
   payload: tokenData,
+});
+
+export const setPnrData = (pnrData: PnrData | null) => ({
+  type: SET_PNR_DATA,
+  payload: pnrData,
+});
+
+export const setTripDetails = (tripDetails: TravelFormData | null) => ({
+  type: SET_TRIP_DETAILS,
+  payload: tripDetails,
 });

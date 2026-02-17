@@ -3,7 +3,7 @@
  * Centralized error handling for all API calls
  */
 
-import { ToastService } from '../lib/toast/ToastService';
+import { ToastService } from '../toast/ToastService';
 
 export interface ApiError {
   message: string;

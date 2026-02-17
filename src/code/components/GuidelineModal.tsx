@@ -1,61 +1,27 @@
 import * as React from 'react';
-import { ApplyVisa } from '../api/rest/applyVisa';
-import { TravelFormData, VisaApplicationReq } from '../types';
-import { VisaRequirement } from './VisaRequirementCard';
+import { connect } from 'react-redux';
+import { useVisa } from '../hooks/use-visa';
 
-interface RequiredDocumentsModalProps {
+import { countryFlagIcon } from '../lib/utils/countryFlagIcon';
+import { downloadGuidelinePDF } from '../lib/utils/guidelineDownload';
+import { StoreStateType } from '../store/store';
+import { TravelFormData, VisaApplicationReq, VisaRequirement } from '../types';
+
+interface OwnProps {
   isOpen: boolean;
   onClose: () => void;
   visaRequirement: VisaRequirement | null;
-  tripDetails: {
-    fromCountry: string;
-    toCountry: string;
-    fromDate: string;
-    toDate: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-  };
-  submittedFormData: TravelFormData | null;
 }
 
-// Helper for Flags (Duplicated for independence/speed)
-const getCountryFlagEmoji = (countryCode: string) => {
-  if (!countryCode) return '';
-  const codeMap: { [key: string]: string } = {
-    GBR: 'GB',
-    FRA: 'FR',
-    USA: 'US',
-    IND: 'IN',
-    DEU: 'DE',
-    ESP: 'ES',
-    ITA: 'IT',
-    CHN: 'CN',
-    JPN: 'JP',
-    AUS: 'AU',
-    CAN: 'CA',
-    BRA: 'BR',
-    ZAF: 'ZA',
-    RUS: 'RU',
-  };
-  let code = countryCode.toUpperCase();
-  if (codeMap[code]) code = codeMap[code];
-  else if (code.length === 3) code = code.slice(0, 2);
+interface StateProps {
+  tripDetails: TravelFormData | null;
+}
 
-  const codePoints = code
-    .toUpperCase()
-    .split('')
-    .map((char) => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
-};
+type GuidelineModalProps = OwnProps & StateProps;
 
-export const RequiredDocumentsModal: React.FC<RequiredDocumentsModalProps> = ({
-  isOpen,
-  onClose,
-  visaRequirement,
-  tripDetails,
-  submittedFormData,
-}) => {
+const GuidelineModalComponent: React.FC<GuidelineModalProps> = ({ isOpen, onClose, visaRequirement, tripDetails }) => {
+  console.log('SABRE-IV OBTAINED TRIP DETAILS FROM THE REDUX Store:', tripDetails);
+
   if (!isOpen || !visaRequirement) return null;
 
   const {
@@ -69,8 +35,8 @@ export const RequiredDocumentsModal: React.FC<RequiredDocumentsModalProps> = ({
     visaDocumentsGuidelines,
   } = visaRequirement as any;
 
-  const fromFlag = getCountryFlagEmoji(fromCountryCode);
-  const toFlag = getCountryFlagEmoji(toCountryCode);
+  const fromFlag = countryFlagIcon(fromCountryCode);
+  const toFlag = countryFlagIcon(toCountryCode);
 
   const feesText = visaMetaData?.visaFees?.map((f: any) => `${f.applicantType}: ${f.amount}`).join(', ') || 'N/A';
 
@@ -78,46 +44,38 @@ export const RequiredDocumentsModal: React.FC<RequiredDocumentsModalProps> = ({
   const requiredDocs = visaDocumentsGuidelines?.filter((g: any) => g.mandatory) || [];
   const supportingDocs = visaDocumentsGuidelines?.filter((g: any) => !g.mandatory) || [];
 
+  const { isApplyVisaLoading, applyVisaResponse, applyVisaApplication } = useVisa();
+
   const handleDownload = () => {
-    console.log('Download Guideline Clicked');
+    downloadGuidelinePDF(visaRequirement);
   };
 
   const handleApply = async () => {
-    try {
-      // Apply Visa Payload
-      const payload = {
-        applicant: {
-          firstName: tripDetails.firstName,
-          lastName: tripDetails.lastName,
-          email: submittedFormData.email,
-          phone: tripDetails.phone,
-          sex: submittedFormData.sex,
-          applicantType: 'D2C',
-          address: {
-            country: submittedFormData.passportNationality,
-            state: '',
-            city: '',
-            pin: '',
-          },
+    const payload = {
+      applicant: {
+        firstName: tripDetails.firstName,
+        lastName: tripDetails.lastName,
+        email: tripDetails.email,
+        phone: tripDetails.phone,
+        sex: tripDetails.sex,
+        applicantType: 'D2C',
+        address: {
+          country: tripDetails.nationality,
+          state: '',
+          city: '',
+          pin: '',
         },
-        visaApplication: {
-          visaFrom: fromCountryName,
-          visaTo: toCountryName,
-          visaType: visaType,
-          fromDate: tripDetails.fromDate,
-          toDate: submittedFormData.passportNationality,
-          nationality: submittedFormData.passportNationality,
-        },
-      };
-
-      console.log('SABRE-IV Applying Visa with Payload:', payload);
-
-      // Call API
-      const response = await ApplyVisa(payload as VisaApplicationReq);
-      console.log('SABRE-IV API Response:', response);
-    } catch (error) {
-      console.error('SABRE-IV: Failed to apply visa', error);
-    }
+      },
+      visaApplication: {
+        visaFrom: fromCountryName,
+        visaTo: toCountryName,
+        visaType: visaType,
+        fromDate: tripDetails.returnDate.split('/').reverse().join('-'),
+        toDate: tripDetails.returnDate,
+        nationality: tripDetails.nationality,
+      },
+    };
+    applyVisaApplication(payload as VisaApplicationReq);
   };
 
   return (
@@ -332,11 +290,18 @@ export const RequiredDocumentsModal: React.FC<RequiredDocumentsModalProps> = ({
           <button
             className='btn-primary'
             onClick={handleApply}
+            disabled={isApplyVisaLoading}
           >
-            Apply Visa
+            {isApplyVisaLoading ? 'Applying...' : 'Apply Visa'}
           </button>
         </div>
       </div>
     </div>
   );
 };
+
+const mapStateToProps = (state: StoreStateType): StateProps => ({
+  tripDetails: state.tripDetails,
+});
+
+export const GuidelineModal = connect<StateProps, {}, OwnProps>(mapStateToProps)(GuidelineModalComponent);

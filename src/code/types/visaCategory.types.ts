@@ -61,3 +61,27 @@ export interface VisaRequirementsResponse {
   isSupported: boolean;
   visa: VisaInfo[];
 }
+
+export interface VisaFeeInfo {
+  applicantType: string;
+  amount: string;
+}
+
+export interface VisaMetaDataInfo {
+  visaName: string;
+  visaFees: VisaFee[];
+  processingTime: string;
+  maxLengthOfStay?: string;
+  duration?: string;
+  entriesAllowed?: string;
+}
+
+export interface VisaRequirement {
+  fromCountryCode: string;
+  toCountryCode: string;
+  fromCountryName?: string;
+  toCountryName?: string;
+  visaType: string;
+  visaCategory: string;
+  visaMetaData: VisaMetaDataInfo;
+}

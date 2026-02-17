@@ -1,54 +1,113 @@
 import * as React from 'react';
-import { TravelFormData } from '../types';
+import { connect } from 'react-redux';
+import { getAirportCountryInfo } from '../lib/utils/airportCountry';
 
-interface TravelDetailsFormProps {
-  tripDetails: {
-    fromCountry: string;
-    toCountry: string;
-    fromDate: string;
-    toDate: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-  };
+import { ALL_COUNTRIES } from '../lib/utils/allCountry';
+import { getAlpha3Code, getCountryName } from '../lib/utils/alpha3Country';
+import { setTripDetails } from '../store/actions';
+import { StoreStateType } from '../store/store';
+import { PnrData, TravelFormData, VisaDetailsPayload } from '../types';
+
+interface OwnProps {
   isLoading: boolean;
-  onGetGuidelines: (formData: TravelFormData) => void;
+  onGetGuidelines: (payload: VisaDetailsPayload) => void;
 }
 
-export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetails, isLoading, onGetGuidelines }) => {
+interface StateProps {
+  pnrData: PnrData | null;
+}
+
+interface DispatchProps {
+  setTripDetails: (tripDetails: TravelFormData | null) => void;
+}
+
+type TravelDetailsFormProps = OwnProps & StateProps & DispatchProps;
+
+const TravelDetailsFormComponent: React.FC<TravelDetailsFormProps> = ({
+  isLoading,
+  onGetGuidelines,
+  pnrData,
+  setTripDetails,
+}) => {
+  console.log('PNR Details from Redux from Travel Details', pnrData);
   const [formData, setFormData] = React.useState<TravelFormData>({
-    firstName: tripDetails.firstName,
-    lastName: tripDetails.lastName,
-    phone: tripDetails.phone,
+    firstName: '',
+    lastName: '',
+    phone: '',
     email: '',
     sex: '',
     passportIssueCountry: '',
     passportExpiryDate: '',
-    passportNationality: '',
-    birthDate: '',
-    departurePoint: tripDetails.fromCountry,
-    departureType: 'AIRPORT',
-    departureDateTime: tripDetails.fromDate,
-    arrivalPoint: tripDetails.toCountry,
-    arrivalType: 'AIRPORT',
+    nationality: '',
+    departureAirportCode: '',
+    departureDateTime: '',
+    arrivalAirportCode: '',
     arrivalDateTime: '',
     returnDate: '',
+    fromCountry: '',
+    toCountry: '',
   });
-
   const [errors, setErrors] = React.useState<Partial<Record<keyof TravelFormData, string>>>({});
 
-  // ... (useEffect remains same) ...
+  const populateFormData = async () => {
+    if (pnrData && pnrData.segments.length > 0) {
+      const firstSeg = pnrData.segments[0];
+      const lastSeg = pnrData.segments[pnrData.segments.length - 1];
+      const firstPax = pnrData.pax[0] || { firstName: '', lastName: '', phone: '' };
+      const departureAirportCode = lastSeg.origin || firstSeg.origin;
+      const arrivalAirportCode = lastSeg.destination || firstSeg.destination;
+
+      const departureCountry = (await getAirportCountryInfo(departureAirportCode)).country;
+      const arrivalCountry = (await getAirportCountryInfo(arrivalAirportCode)).country;
+
+      let formattedDepDate = '';
+      if (firstSeg.depDate) {
+        const datePart = firstSeg.depDate.split('T')[0]; // "2026-07-25"
+        const [year, month, day] = datePart.split('-');
+        formattedDepDate = `${day}/${month}/${year}`;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        firstName: firstPax.firstName || '',
+        lastName: firstPax.lastName || '',
+        phone: firstPax.phone || '',
+        departureAirportCode: firstSeg.origin,
+        arrivalAirportCode: lastSeg.destination,
+        departureDateTime: formattedDepDate,
+        fromCountry: getCountryName(departureCountry) || '',
+        toCountry: getCountryName(arrivalCountry) || '',
+      }));
+    }
+  };
+
+  // Auto-populate form fields from PNR data in Redux
   React.useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      departurePoint: tripDetails.fromCountry,
-      departureDateTime: tripDetails.fromDate,
-      arrivalPoint: tripDetails.toCountry,
-      firstName: tripDetails.firstName,
-      lastName: tripDetails.lastName,
-      phone: tripDetails.phone,
-    }));
-  }, [tripDetails]);
+    populateFormData();
+  }, [pnrData]);
+
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to get minimum arrival date (departure date or today, whichever is earlier)
+  const getMinArrivalDate = () => {
+    if (formData.departureDateTime) {
+      // Convert DD/MM/YYYY to YYYY-MM-DD
+      let depDate = formData.departureDateTime;
+      if (depDate.includes('/')) {
+        const [day, month, year] = depDate.split('/');
+        depDate = `${year}-${month}-${day}`;
+      }
+      return depDate;
+    }
+    return getTodayDate();
+  };
 
   const validateTextOnly = (text: string) => /^[a-zA-Z\s]+$/.test(text);
   const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -76,6 +135,9 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
     if (!formData.returnDate) {
       newErrors.returnDate = 'Required *';
       isValid = false;
+    } else if (formData.returnDate < getTodayDate()) {
+      newErrors.returnDate = 'Must be a future date';
+      isValid = false;
     }
 
     // Passport Issue Country
@@ -91,20 +153,17 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
     if (!formData.passportExpiryDate) {
       newErrors.passportExpiryDate = 'Required *';
       isValid = false;
+    } else if (formData.passportExpiryDate < getTodayDate()) {
+      newErrors.passportExpiryDate = 'Must be a future date';
+      isValid = false;
     }
 
     // Passport Nationality
-    if (!formData.passportNationality) {
-      newErrors.passportNationality = 'Required *';
+    if (!formData.nationality) {
+      newErrors.nationality = 'Required *';
       isValid = false;
-    } else if (!validateTextOnly(formData.passportNationality)) {
-      newErrors.passportNationality = 'Only letters allowed';
-      isValid = false;
-    }
-
-    // Birth Date
-    if (!formData.birthDate) {
-      newErrors.birthDate = 'Required *';
+    } else if (!validateTextOnly(formData.nationality)) {
+      newErrors.nationality = 'Only letters allowed';
       isValid = false;
     }
 
@@ -112,6 +171,17 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
     if (!formData.arrivalDateTime) {
       newErrors.arrivalDateTime = 'Required *';
       isValid = false;
+    } else if (formData.departureDateTime && formData.arrivalDateTime) {
+      // Convert DD/MM/YYYY to YYYY-MM-DD for comparison
+      let depDate = formData.departureDateTime;
+      if (depDate.includes('/')) {
+        const [day, month, year] = depDate.split('/');
+        depDate = `${year}-${month}-${day}`;
+      }
+      if (formData.arrivalDateTime < depDate) {
+        newErrors.arrivalDateTime = 'Must be on or after departure date';
+        isValid = false;
+      }
     }
 
     setErrors(newErrors);
@@ -125,7 +195,7 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // ... (submit logic mostly same, just no deleted fields) ...
     if (validate()) {
       const enhancedData = { ...formData };
@@ -151,7 +221,37 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
         enhancedData.departureDateTime = enhancedData.departureDateTime.split(' (')[0];
       }
 
-      onGetGuidelines(enhancedData);
+      // Format the API payload
+      const fromCountryCode = (await getAirportCountryInfo(enhancedData.departureAirportCode)).country;
+      const toCountryCode = (await getAirportCountryInfo(enhancedData.arrivalAirportCode)).country;
+
+      const apiPayload: VisaDetailsPayload = {
+        visaStatusPayload: {
+          fromCountryCode: getAlpha3Code(fromCountryCode),
+          toCountryCode: getAlpha3Code(toCountryCode),
+          nationality: enhancedData.nationality,
+          departureAirportCode: enhancedData.departureAirportCode,
+          arrivalAirportCode: enhancedData.arrivalAirportCode,
+          departureDate: enhancedData.departureDateTime
+            ? enhancedData.departureDateTime.split('/').reverse().join('-')
+            : '',
+          arrivalDate: enhancedData.arrivalDateTime,
+          returnDate: enhancedData.returnDate,
+          passportIssueCountry: enhancedData.passportIssueCountry,
+          passportExpiryDate: enhancedData.passportExpiryDate,
+        },
+        visaCategoryPayload: {
+          fromCountryCode: getAlpha3Code(fromCountryCode),
+          toCountryCode: getAlpha3Code(toCountryCode),
+          fromDate: enhancedData.departureDateTime ? enhancedData.departureDateTime.split('/').reverse().join('-') : '',
+          toDate: enhancedData.returnDate ? enhancedData.returnDate : '',
+        },
+      };
+
+      // Store trip details in Redux
+      setTripDetails(enhancedData);
+      console.log('SABRE-IV Trip Details stored in Redux:', enhancedData);
+      onGetGuidelines(apiPayload);
     }
   };
 
@@ -227,31 +327,48 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
           {errors.sex && <span className='error-text'>{errors.sex}</span>}
         </div>
 
+        {/* Row 4: Passport Info */}
         <div className='form-group'>
           <label className='form-label'>
-            Birth Date <span className='required'>*</span>
+            Nationality <span className='required'>*</span>
           </label>
-          <input
-            type='date'
-            className={`form-input ${errors.birthDate ? 'error' : ''}`}
-            value={formData.birthDate}
-            onChange={(e) => handleChange('birthDate', e.target.value)}
-          />
-          {errors.birthDate && <span className='error-text'>{errors.birthDate}</span>}
+          <select
+            className={`form-input ${errors.nationality ? 'error' : ''}`}
+            value={formData.nationality}
+            onChange={(e) => handleChange('nationality', e.target.value)}
+          >
+            <option value=''>Select Nationality</option>
+            {ALL_COUNTRIES.map((country) => (
+              <option
+                key={country.value}
+                value={country.value}
+              >
+                {country.label}
+              </option>
+            ))}
+          </select>
+          {errors.nationality && <span className='error-text'>{errors.nationality}</span>}
         </div>
 
-        {/* Row 4: Passport Info */}
         <div className='form-group'>
           <label className='form-label'>
             Passport Issue Country <span className='required'>*</span>
           </label>
-          <input
-            type='text'
+          <select
             className={`form-input ${errors.passportIssueCountry ? 'error' : ''}`}
             value={formData.passportIssueCountry}
             onChange={(e) => handleChange('passportIssueCountry', e.target.value)}
-            placeholder='e.g. NL'
-          />
+          >
+            <option value=''>Select Country</option>
+            {ALL_COUNTRIES.map((country) => (
+              <option
+                key={country.value}
+                value={country.value}
+              >
+                {country.label}
+              </option>
+            ))}
+          </select>
           {errors.passportIssueCountry && <span className='error-text'>{errors.passportIssueCountry}</span>}
         </div>
 
@@ -264,41 +381,64 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
             className={`form-input ${errors.passportExpiryDate ? 'error' : ''}`}
             value={formData.passportExpiryDate}
             onChange={(e) => handleChange('passportExpiryDate', e.target.value)}
+            min={getTodayDate()}
           />
           {errors.passportExpiryDate && <span className='error-text'>{errors.passportExpiryDate}</span>}
-        </div>
-
-        {/* Row 5: Nationalities & Passport Nationality */}
-        <div className='form-group'>
-          <label className='form-label'>
-            Passport Nationality <span className='required'>*</span>
-          </label>
-          <input
-            type='text'
-            className={`form-input ${errors.passportNationality ? 'error' : ''}`}
-            value={formData.passportNationality}
-            onChange={(e) => handleChange('passportNationality', e.target.value)}
-            placeholder='e.g. NL'
-          />
-          {errors.passportNationality && <span className='error-text'>{errors.passportNationality}</span>}
         </div>
 
         {/* Row 6: Trip - Departure */}
         <div className='form-group'>
           <label className='form-label'>
-            Departure Point <span className='required'>*</span>
+            Departure Airport Code <span className='required'>*</span>
           </label>
           <input
             type='text'
             className='form-input disabled'
-            value={formData.departurePoint}
+            value={formData.departureAirportCode}
             disabled
           />
         </div>
 
         <div className='form-group'>
           <label className='form-label'>
-            Flight Departure Date & Time <span className='required'>*</span>
+            From Country <span className='required'>*</span>
+          </label>
+          <input
+            type='text'
+            className='form-input disabled'
+            value={formData.fromCountry}
+            disabled
+          />
+        </div>
+
+        <div className='form-group'>
+          <label className='form-label'>
+            Arrival Airport Code <span className='required'>*</span>
+          </label>
+          <input
+            type='text'
+            className='form-input disabled'
+            value={formData.arrivalAirportCode}
+            disabled
+          />
+        </div>
+
+        <div className='form-group'>
+          <label className='form-label'>
+            To Country <span className='required'>*</span>
+          </label>
+          <input
+            type='text'
+            className='form-input disabled'
+            value={formData.toCountry}
+            disabled
+          />
+        </div>
+
+        {/* Row 7: Trip - Arrival */}
+        <div className='form-group'>
+          <label className='form-label'>
+            Departure Date <span className='required'>*</span>
           </label>
           <input
             type='text'
@@ -307,55 +447,18 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
             disabled
           />
         </div>
-
         <div className='form-group'>
           <label className='form-label'>
-            Departure Type <span className='required'>*</span>
+            Arrival Date <span className='required'>*</span>
           </label>
           <input
-            type='text'
-            className='form-input disabled'
-            value='AIRPORT'
-            disabled
-          />
-        </div>
-
-        {/* Row 7: Trip - Arrival */}
-        <div className='form-group'>
-          <label className='form-label'>
-            Arrival Point <span className='required'>*</span>
-          </label>
-          <input
-            type='text'
-            className='form-input disabled'
-            value={formData.arrivalPoint}
-            disabled
-          />
-        </div>
-
-        <div className='form-group'>
-          <label className='form-label'>
-            Flight Arrival Date & Time <span className='required'>*</span>
-          </label>
-          <input
-            type='datetime-local'
+            type='date'
             className={`form-input ${errors.arrivalDateTime ? 'error' : ''}`}
             value={formData.arrivalDateTime}
             onChange={(e) => handleChange('arrivalDateTime', e.target.value)}
+            min={getMinArrivalDate()}
           />
           {errors.arrivalDateTime && <span className='error-text'>{errors.arrivalDateTime}</span>}
-        </div>
-
-        <div className='form-group'>
-          <label className='form-label'>
-            Arrival Type <span className='required'>*</span>
-          </label>
-          <input
-            type='text'
-            className='form-input disabled'
-            value='AIRPORT'
-            disabled
-          />
         </div>
 
         {/* Row 8: Return Date */}
@@ -368,6 +471,7 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
             className={`form-input ${errors.returnDate ? 'error' : ''}`}
             value={formData.returnDate}
             onChange={(e) => handleChange('returnDate', e.target.value)}
+            min={getTodayDate()}
           />
           {errors.returnDate && <span className='error-text'>{errors.returnDate}</span>}
         </div>
@@ -385,3 +489,16 @@ export const TravelDetailsForm: React.FC<TravelDetailsFormProps> = ({ tripDetail
     </div>
   );
 };
+
+const mapStateToProps = (state: StoreStateType): StateProps => ({
+  pnrData: state.pnrData,
+});
+
+const mapDispatchToProps = {
+  setTripDetails,
+};
+
+export const TravelDetailsForm = connect<StateProps, DispatchProps, OwnProps>(
+  mapStateToProps,
+  mapDispatchToProps
+)(TravelDetailsFormComponent);

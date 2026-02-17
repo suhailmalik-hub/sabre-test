@@ -1,31 +1,9 @@
 import * as React from 'react';
 
-export interface VisaFee {
-  applicantType: string;
-  amount: string;
-}
+import { countryFlagIcon } from '../lib/utils/countryFlagIcon';
+import { VisaRequirement } from '../types';
 
-export interface VisaMetaData {
-  visaName: string;
-  visaFees: VisaFee[];
-  processingTime: string;
-  maxLengthOfStay?: string;
-  duration?: string;
-  entriesAllowed?: string;
-}
-
-export interface VisaRequirement {
-  fromCountryCode: string;
-  toCountryCode: string;
-  fromCountryName?: string;
-  toCountryName?: string;
-  visaType: string;
-  visaCategory: string;
-  visaMetaData: VisaMetaData;
-  // Add other fields as needed
-}
-
-interface VisaRequirementCardProps {
+interface VisaCardProps {
   visaRequirement: VisaRequirement;
   onApply: (visaRequirement: VisaRequirement) => void;
 }
@@ -54,43 +32,9 @@ const ReadMore: React.FC<{ text: string; limit?: number }> = ({ text, limit = 50
   );
 };
 
-// Simple helper to convert country code to flag emoji
-const getCountryFlagEmoji = (countryCode: string) => {
-  if (!countryCode) return '';
-  const codeMap: { [key: string]: string } = {
-    GBR: 'GB',
-    FRA: 'FR',
-    USA: 'US',
-    IND: 'IN',
-    DEU: 'DE',
-    ESP: 'ES',
-    ITA: 'IT',
-    CHN: 'CN',
-    JPN: 'JP',
-    AUS: 'AU',
-    CAN: 'CA',
-    BRA: 'BR',
-    ZAF: 'ZA',
-    RUS: 'RU',
-  };
-
-  let code = countryCode.toUpperCase();
-  if (codeMap[code]) {
-    code = codeMap[code];
-  } else if (code.length === 3) {
-    code = code.slice(0, 2);
-  }
-
-  const codePoints = code
-    .toUpperCase()
-    .split('')
-    .map((char) => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
-};
-
-export const VisaRequirementCard: React.FC<VisaRequirementCardProps> = ({ visaRequirement, onApply }) => {
+export const VisaCard: React.FC<VisaCardProps> = ({ visaRequirement, onApply }) => {
   const { visaType, visaCategory, toCountryCode, visaMetaData } = visaRequirement;
-  const flag = getCountryFlagEmoji(toCountryCode);
+  const flag = countryFlagIcon(toCountryCode);
 
   const feesText = visaMetaData.visaFees?.map((f) => `${f.applicantType}: ${f.amount}`).join(', ') || 'N/A';
 

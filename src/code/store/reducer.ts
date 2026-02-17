@@ -1,5 +1,5 @@
-import { TokenData } from '../types';
 import { TPA_API_KEY } from '../env';
+import { PnrData, TokenData, TravelFormData } from '../types';
 
 export type AgentDetails = {
   agentId: string;
@@ -15,6 +15,8 @@ export type PnrDetails = {
   agentDetails: AgentDetails | null;
   xApiKey: string | null;
   authToken: TokenData | null;
+  pnrData: PnrData | null;
+  tripDetails: TravelFormData | null;
 };
 
 const initialState: PnrDetails = {
@@ -24,6 +26,8 @@ const initialState: PnrDetails = {
   agentDetails: null,
   xApiKey: TPA_API_KEY,
   authToken: null,
+  pnrData: null,
+  tripDetails: null,
 };
 
 export const soapReducer = (state = initialState, action: { type: string; payload?: any }): PnrDetails => {
@@ -38,6 +42,10 @@ export const soapReducer = (state = initialState, action: { type: string; payloa
       return { ...state, agentDetails: action.payload };
     case 'SET_AUTH_TOKEN':
       return { ...state, authToken: action.payload };
+    case 'SET_PNR_DATA':
+      return { ...state, pnrData: action.payload };
+    case 'SET_TRIP_DETAILS':
+      return { ...state, tripDetails: action.payload };
     case 'RESET_STORE_STATE':
       return initialState;
     default:
